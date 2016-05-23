@@ -16,5 +16,9 @@ app.config(function($routeProvider) {
         .when('/teams', {
             templateUrl: './src/html/teams.html',
             controller: 'teamsCtrl'
+        })
+        .when('/game', {
+            templateUrl: './src/html/game.html',
+            controller: 'gameCtrl'
         });
 });
