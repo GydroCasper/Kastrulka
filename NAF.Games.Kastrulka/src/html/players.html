@@ -1,0 +1,55 @@
+<div ng-form="playersForm">
+    <div class="row">
+        <div class="col-md-12 margin-b15 center">
+            <h3>Этап 1. Добавление игроков</h3>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 margin-b15 center">
+            <span>Добавьте участников игры (должно быть не меньше {{main.MINIMAL_PLAYERS_AMOUNT}} человек и быть четным количеством)</span>
+        </div>
+    </div>
+    <div class="row margin-b15" ng-repeat="player in data.players track by player.id">
+        <div class="col-md-12">
+            <input type="text" ng-class="['form-control']" ng-model="player.name" ng-change="main.validate()">
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 margin-b15">
+            <input type="button" value="Добавить" class="btn-success btn-block center" ng-click="main.add()"/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            <span class="label label-danger full-width margin-t15 margin-b5" ng-show="playersForm.$error.minPlayers">
+                Введено менее {{main.MINIMAL_PLAYERS_AMOUNT}} человек
+            </span>
+            <span class="label label-danger full-width margin-b5" ng-show="playersForm.$error.evenPlayers">
+                Количество игроков должно быть чётным
+            </span>
+            <span class="label label-danger full-width margin-b5" ng-show="playersForm.$error.uniquePlayers">
+                Имена игроков должны отличаться друг от друга
+            </span>
+            <input type="button" value="Продолжить" ng-click="main.next()" ng-disabled="playersForm.$invalid"
+                   ng-class="['btn-block btn-success', {'disabled btn btn-primary': playersForm.$invalid}]"/>
+        </div>
+    </div>
+</div>
+
+
+<div id="warnModal" class="modal fade" role="dialog">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Остались незаполненные поля. Вы уверены, что ввели всех участников игры?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal" ng-click="main.proceed()">Да</button>
+                <button type="button" class="btn btn-default" data-dismiss="modal">Нет</button>
+            </div>
+        </div>
+    </div>
+</div>

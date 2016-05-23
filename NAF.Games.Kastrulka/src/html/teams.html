@@ -1,0 +1,27 @@
+<div ng-form="teamsForm">
+    <div class="row">
+        <div class="col-md-12 margin-b15 center">
+            <h3>Этап 3. Формирование команд</h3>
+        </div>
+    </div>
+    <div class="row margin-b15" ng-repeat="team in data.teams track by team.id">
+        <div class="col-md-12">
+            <span class="label label-pill label-default full-width font-size17pt">{{team.name}}</span>
+            <div class="padding-lr30 margin-t15 margin-b15">
+                <span class="label label-primary full-width margin-b5 font-size13pt" ng-repeat="player in team.players track by player.id">
+                    {{player.name}}
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 margin-b15">
+            <input type="button" value="Перетасовать" class="btn-success btn-block center" ng-click="main.shuffle()"/>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 margin-b15">
+            <input type="button" value="Продолжить" ng-click="main.next()" ng-class="['btn-block btn-success']"/>
+        </div>
+    </div>
+</div>

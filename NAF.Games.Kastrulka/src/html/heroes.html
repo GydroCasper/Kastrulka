@@ -1,0 +1,47 @@
+<div ng-form="heroesForm">
+    <div class="row">
+        <div class="col-md-12 margin-b15 center">
+            <h3>Этап 2. Добавление персонажей</h3>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12 margin-b15 center">
+            <span>Добавьте персонажей игры. </span><span class="red">Не показывайте своих персонажей другим участникам игры</span>
+        </div>
+    </div>
+    <form class="form-inline margin-b15">
+        <div class="form-group full-width table" style="display:table">
+            <label for="heroesAmount" style="display:table-cell; width:1px;white-space: nowrap">
+                Количество персонажей на одного игрока:&nbsp;
+            </label>
+            <input type="number" min="1" style="display:table-cell; width:100%;" class="form-control" id="heroesAmount"
+                   ng-model="data.heroesAmountBeforeValidation" ng-model-options="{ updateOn: 'blur'}">
+        </div>
+    </form>
+    <div class="panel-group" id="playersPanel">
+        <div class="panel panel-default" style="margin-bottom: 15px;" ng-repeat="player in data.players track by player.id">
+            <div class="panel-heading">
+                <h4 class="panel-title pointer" data-toggle="collapse" data-target="#personalHeroes{{player.id}}" data-parent="#playersPanel">
+                    <span style="float:right">{{main.getFilledHeroesForPlayer(player)}}</span>{{player.name}}
+                </h4>
+            </div>
+            <div id="personalHeroes{{player.id}}" class="panel-collapse collapse">
+                <div ng-repeat="hero in player.heroes">
+                    <hero-input hero="hero" hero-name-changed="main.heroNameChanged"></hero-input>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+             <span class="label label-danger full-width margin-t15 margin-b5" ng-show="heroesForm.$error.heroesAmountNotEqualsToRequired">
+                Не все пользователи ввели требуемое количество игроков.
+            </span>
+            <span class="label label-danger full-width margin-t15 margin-b5" ng-show="heroesForm.$error.heroIsNotUnique">
+                Введены одинаковые персонажи у одного игрока
+            </span>
+            <input type="button" value="Продолжить" ng-click="main.next()" ng-disabled="heroesForm.$invalid"
+                   ng-class="['btn-block btn-success', {'disabled btn btn-primary': heroesForm.$invalid}]"/>
+        </div>
+    </div>
+</div>
