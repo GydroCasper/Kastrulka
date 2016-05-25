@@ -1,5 +1,13 @@
 app.factory('heroesService', function () {
+    var heroes = [];
+
     return {
+        set: function (source){
+            heroes = source;
+        },
+        get: function(){
+            return angular.copy(heroes);
+        },
         checkIfHeroesAreUnique: function (players) {
             return !_.some(players, function (player){
                 var notEmptyHeroes = _.filter(player.heroes, 'name');

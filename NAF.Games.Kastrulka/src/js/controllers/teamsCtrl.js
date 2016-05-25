@@ -1,4 +1,4 @@
-app.controller("teamsCtrl", function ($scope, $location, playersService, teamsService) {
+app.controller("teamsCtrl", function ($scope, $location, playersService, teamsService, toursService) {
 
     $scope.main = {
         shuffle: function (){
@@ -6,7 +6,8 @@ app.controller("teamsCtrl", function ($scope, $location, playersService, teamsSe
         },
         next: function(){
             teamsService.set($scope.data.teams);
-            $location.path('game');
+            toursService.initialize();
+                $location.path('game');
         }
     };
 

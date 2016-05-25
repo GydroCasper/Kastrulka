@@ -24,6 +24,7 @@ app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService
         },
         next: function(){
             playersService.set($scope.data.players);
+            heroesService.set(_.flatMap($scope.data.players, 'heroes'));
             $location.path('teams');
         }
     };
@@ -95,19 +96,21 @@ app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService
             return;
         }
 
+        var deletingHeroesConfirmed = function (result){
+            if (result) {
+                refreshHeroes();
+            }
+            else {
+                $scope.data.heroesAmountBeforeValidation = $scope.data.heroesAmount;
+            }
+
+            $scope.$apply();
+        };
+
         bootbox.confirm({
             buttons: COMMON.confirmButtons,
             message: "Данное действие приведет к удалению некоторых уже введенных персонажей. Продолжить?",
-            callback: function (result) {
-                if (result) {
-                    refreshHeroes();
-                }
-                else {
-                    $scope.data.heroesAmountBeforeValidation = $scope.data.heroesAmount;
-                }
-
-                $scope.$apply();
-            }
+            callback: deletingHeroesConfirmed
         });
     });
 

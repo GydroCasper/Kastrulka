@@ -1,7 +1,6 @@
 var app = angular.module("kastrulkaApp", ['ngRoute']);
 app.config(function($routeProvider) {
     $routeProvider
-
         .when('/', {
             templateUrl : './src/html/startpage.html',
             controller  : 'startpageCtrl'
@@ -35,13 +34,35 @@ app.constant('COMMON', {
         }
     }
 });
+app.directive('heroInput', function () {
+    return {
+        restrict: "E",
+        replace: true,
+        templateUrl: "./src/html/heroInput.html",
+        scope: {
+            hero: "=",
+            heroNameChanged: "&"
+        },
+        controller: function ($scope){
+            $scope.$watch('hero.name', function (){
+                $scope.heroNameChanged()();
+            });
+        }
+    };
+});
 /**
  * Created by gydro_000 on 5/16/2016.
  */
 app.controller("kastrulkaCtrl", function($scope) {
 });
-app.controller("gameCtrl", function ($scope, $location, playersService, teamsService) {
+app.controller("gameCtrl", function ($scope, $location, playersService, teamsService, toursService) {
+    $scope.main = {
+        toursService: toursService
+    };
 
+    var teams = teamsService.get();
+
+    //while()
 });
 app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService, heroesService, numbersService) {
     $scope.data = {
@@ -69,6 +90,7 @@ app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService
         },
         next: function(){
             playersService.set($scope.data.players);
+            heroesService.set(_.flatMap($scope.data.players, 'heroes'));
             $location.path('teams');
         }
     };
@@ -140,19 +162,21 @@ app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService
             return;
         }
 
+        var deletingHeroesConfirmed = function (result){
+            if (result) {
+                refreshHeroes();
+            }
+            else {
+                $scope.data.heroesAmountBeforeValidation = $scope.data.heroesAmount;
+            }
+
+            $scope.$apply();
+        };
+
         bootbox.confirm({
             buttons: COMMON.confirmButtons,
             message: "Данное действие приведет к удалению некоторых уже введенных персонажей. Продолжить?",
-            callback: function (result) {
-                if (result) {
-                    refreshHeroes();
-                }
-                else {
-                    $scope.data.heroesAmountBeforeValidation = $scope.data.heroesAmount;
-                }
-
-                $scope.$apply();
-            }
+            callback: deletingHeroesConfirmed
         });
     });
 
@@ -174,14 +198,24 @@ app.controller("playersCtrl", function ($scope, $location, COMMON, playersServic
         },
         next: function () {
             if($scope.main.getNotEmptyPlayers().length != $scope.data.players.length) {
-                $('#warnModal').modal();
+                bootbox.confirm({
+                    buttons: COMMON.confirmButtons,
+                    message: "Остались незаполненные поля. Вы уверены, что ввели всех участников игры?",
+                    callback: function(result) {
+                        if(result) {
+                            $scope.main.proceed();
+                            $scope.$apply();
+                        }
+                    }
+                });
+                //$('#warnModal').modal();
             }
             else {
                 $scope.main.proceed();
             }
         },
         proceed: function (){
-            playersService.set($scope.data.players);
+            playersService.set($scope.main.getNotEmptyPlayers());
             $location.path('heroes');
         },
         getNotEmptyPlayers: function (){
@@ -235,7 +269,7 @@ app.controller("playersCtrl", function ($scope, $location, COMMON, playersServic
  */
 app.controller("startpageCtrl", function($scope) {
 });
-app.controller("teamsCtrl", function ($scope, $location, playersService, teamsService) {
+app.controller("teamsCtrl", function ($scope, $location, playersService, teamsService, toursService) {
 
     $scope.main = {
         shuffle: function (){
@@ -243,7 +277,8 @@ app.controller("teamsCtrl", function ($scope, $location, playersService, teamsSe
         },
         next: function(){
             teamsService.set($scope.data.teams);
-            $location.path('game');
+            toursService.initialize();
+                $location.path('game');
         }
     };
 
@@ -261,24 +296,16 @@ app.controller("teamsCtrl", function ($scope, $location, playersService, teamsSe
 
     createTeams();
 });
-app.directive('heroInput', function () {
-    return {
-        restrict: "E",
-        replace: true,
-        templateUrl: "./src/html/heroInput.html",
-        scope: {
-            hero: "=",
-            heroNameChanged: "&"
-        },
-        controller: function ($scope){
-            $scope.$watch('hero.name', function (){
-                $scope.heroNameChanged()();
-            });
-        }
-    };
-});
 app.factory('heroesService', function () {
+    var heroes = [];
+
     return {
+        set: function (source){
+            heroes = source;
+        },
+        get: function(){
+            return angular.copy(heroes);
+        },
         checkIfHeroesAreUnique: function (players) {
             return !_.some(players, function (player){
                 var notEmptyHeroes = _.filter(player.heroes, 'name');
@@ -314,7 +341,6 @@ app.factory('playersService', function(){
             return angular.copy(players);
         }
     };
-
 });
 app.factory('teamsService', function(){
 
@@ -327,6 +353,29 @@ app.factory('teamsService', function(){
         get: function(){
             return angular.copy(teams);
         }
+    };
+
+});
+app.factory('toursService', function(heroesService){
+
+    var tours = [];
+
+    var incrementTour = function (){
+        tours.push({number: tours.length + 1, heroes: _.shuffle(heroesService.get()), guessedHeroes: []});
+    };
+
+    return {
+        incrementTour: incrementTour,
+        getCurrentTourNumber: function () {
+            return tours[tours.length - 1].number;
+        },
+        initialize: function (){
+            tours = [];
+            incrementTour();
+        }//,
+        //getRemaingHeroesCount function (){
+        //
+        //}
     };
 
 });

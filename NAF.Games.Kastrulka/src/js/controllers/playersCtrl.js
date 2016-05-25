@@ -12,14 +12,24 @@ app.controller("playersCtrl", function ($scope, $location, COMMON, playersServic
         },
         next: function () {
             if($scope.main.getNotEmptyPlayers().length != $scope.data.players.length) {
-                $('#warnModal').modal();
+                bootbox.confirm({
+                    buttons: COMMON.confirmButtons,
+                    message: "Остались незаполненные поля. Вы уверены, что ввели всех участников игры?",
+                    callback: function(result) {
+                        if(result) {
+                            $scope.main.proceed();
+                            $scope.$apply();
+                        }
+                    }
+                });
+                //$('#warnModal').modal();
             }
             else {
                 $scope.main.proceed();
             }
         },
         proceed: function (){
-            playersService.set($scope.data.players);
+            playersService.set($scope.main.getNotEmptyPlayers());
             $location.path('heroes');
         },
         getNotEmptyPlayers: function (){

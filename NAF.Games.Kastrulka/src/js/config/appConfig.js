@@ -1,6 +1,5 @@
 app.config(function($routeProvider) {
     $routeProvider
-
         .when('/', {
             templateUrl : './src/html/startpage.html',
             controller  : 'startpageCtrl'
