@@ -7,7 +7,7 @@ app.controller("teamsCtrl", function ($scope, $location, playersService, teamsSe
         next: function(){
             teamsService.set($scope.data.teams);
             toursService.initialize();
-                $location.path('game');
+            $location.path('game');
         }
     };
 

@@ -8,5 +8,8 @@ app.constant('COMMON', {
         cancel: {
             label: 'Нет'
         }
-    }
+    },
+    activeActions: ['объясняет', 'показывает', 'говорит'],
+    passiveAction: 'угадывает',
+    ROUND_PERIOD: 30
 });

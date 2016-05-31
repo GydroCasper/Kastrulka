@@ -32,37 +32,36 @@ app.constant('COMMON', {
         cancel: {
             label: 'Нет'
         }
-    }
-});
-app.directive('heroInput', function () {
-    return {
-        restrict: "E",
-        replace: true,
-        templateUrl: "./src/html/heroInput.html",
-        scope: {
-            hero: "=",
-            heroNameChanged: "&"
-        },
-        controller: function ($scope){
-            $scope.$watch('hero.name', function (){
-                $scope.heroNameChanged()();
-            });
-        }
-    };
+    },
+    activeActions: ['объясняет', 'показывает', 'говорит'],
+    passiveAction: 'угадывает',
+    ROUND_PERIOD: 30
 });
 /**
  * Created by gydro_000 on 5/16/2016.
  */
 app.controller("kastrulkaCtrl", function($scope) {
 });
-app.controller("gameCtrl", function ($scope, $location, playersService, teamsService, toursService) {
+app.controller("gameCtrl", function ($scope, $location, playersService, teamsService, toursService, rulesService, COMMON) {
     $scope.main = {
-        toursService: toursService
+        toursService: toursService,
+        rulesService: rulesService,
+        COMMON: COMMON,
+
+        getCurrentActiveUser: function (){
+            var currentTeam = $scope.main.toursService.getCurrentTeam();
+            return currentTeam.players[currentTeam.currentPlayer];
+        },
+        start: function () {
+            $scope.main.isRoundRunning = true;
+        }
     };
 
-    var teams = teamsService.get();
+    //var teams = teamsService.get();
 
-    //while()
+    //while(toursService.getRemainingHeroesInCurrentTour().length){
+    //
+    //}
 });
 app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService, heroesService, numbersService) {
     $scope.data = {
@@ -278,7 +277,7 @@ app.controller("teamsCtrl", function ($scope, $location, playersService, teamsSe
         next: function(){
             teamsService.set($scope.data.teams);
             toursService.initialize();
-                $location.path('game');
+            $location.path('game');
         }
     };
 
@@ -296,6 +295,35 @@ app.controller("teamsCtrl", function ($scope, $location, playersService, teamsSe
 
     createTeams();
 });
+app.directive('heroInput', function () {
+    return {
+        restrict: "E",
+        replace: true,
+        templateUrl: "./src/html/heroInput.html",
+        scope: {
+            hero: "=",
+            heroNameChanged: "&"
+        },
+        controller: function ($scope){
+            $scope.$watch('hero.name', function (){
+                $scope.heroNameChanged()();
+            });
+        }
+    };
+});
+app.directive('roundTimer', ['toursService', function (toursService) {
+    return {
+        restrict: "E",
+        replace: true,
+        templateUrl: "./src/html/round.html",
+        scope: {},
+        controller: function ($scope){
+            $scope.main = {
+                toursService: toursService
+            };
+        }
+    };
+}]);
 app.factory('heroesService', function () {
     var heroes = [];
 
@@ -342,40 +370,99 @@ app.factory('playersService', function(){
         }
     };
 });
-app.factory('teamsService', function(){
+app.factory('rulesService', function(COMMON){
+    var tourRules = [
+        'В данном туре игры один участник команды объясняет персонажа, не используя при этом созвучных и однокоренных слов. ' +
+            'Второй участник игры должен угадать персонажа. Раунд длится ' + COMMON.ROUND_PERIOD +
+        ' секунд, за которые нужно угадать как можно больше персонажей.'
+    ];
 
+    return {
+        get: function(tourNumber){
+            return tourRules[tourNumber];
+        }
+    };
+});
+app.factory('teamsService', function(){
     var teams = [];
+
+    var get = function (){
+        return angular.copy(teams);
+    };
 
     return {
         set: function(source){
             teams = source;
         },
-        get: function(){
-            return angular.copy(teams);
+        get: get,
+        getTeamsExtendedForGame: function (obj){
+            var target = get();
+            _.forEach(target, function (team){
+                _.assign(team, obj);
+            });
+
+            return target;
         }
     };
 
 });
-app.factory('toursService', function(heroesService){
+app.factory('toursService', function(heroesService, teamsService, COMMON){
 
     var tours = [];
 
     var incrementTour = function (){
-        tours.push({number: tours.length + 1, heroes: _.shuffle(heroesService.get()), guessedHeroes: []});
+
+        tours.push({
+            number: tours.length + 1,
+            remainingHeroes: _.shuffle(heroesService.get()),
+            guessedHeroes: [],
+            teams: teamsService.getTeamsExtendedForGame({currentPlayer: 0}),
+            currentTeamNumber: 0,
+            remainingTimeInRound: COMMON.ROUND_PERIOD
+        });
+    };
+
+    var getCurrentTour = function (){
+        return tours[tours.length - 1];
+    };
+
+    var getCurrentTourProperty = function (propertyName){
+        return getCurrentTour()[propertyName];
+    };
+
+    var getCurrentTeam = function(){
+        var currentTour = getCurrentTour();
+        return currentTour.teams[currentTour.currentTeamNumber];
     };
 
     return {
         incrementTour: incrementTour,
         getCurrentTourNumber: function () {
-            return tours[tours.length - 1].number;
+            return getCurrentTourProperty("number");
         },
         initialize: function (){
             tours = [];
             incrementTour();
-        }//,
-        //getRemaingHeroesCount function (){
-        //
-        //}
+        },
+        getRemainingHeroesInCurrentTour: function (){
+            return getCurrentTourProperty("remainingHeroes");
+        },
+        getGuessedHeroesInCurrentTour: function (){
+            return getCurrentTourProperty("guessedHeroes");
+        },
+        getCurrentTeam: getCurrentTeam,
+        getCurrentActiveUser: function (){
+            var currentTeam = getCurrentTeam();
+            return currentTeam.players[currentTeam.currentPlayer];
+        },
+        getCurrentPassiveUser: function (){
+            var currentTeam = getCurrentTeam();
+            return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
+
+        },
+        getRemainingTimeInRound: function (){
+            return getCurrentTour().remainingTimeInRound;
+        }
     };
 
 });

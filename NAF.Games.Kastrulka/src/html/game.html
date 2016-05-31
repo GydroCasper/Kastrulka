@@ -4,4 +4,25 @@
             <h3>Тур {{main.toursService.getCurrentTourNumber()}}</h3>
         </div>
     </div>
+    <div class="row">
+        <div class="col-md-12 margin-b15 center">
+            <span>{{main.rulesService.get(main.toursService.getCurrentTourNumber() - 1)}}</span>
+        </div>
+    </div>
+    <div class="row margin-b15">
+        <div class="col-md-12">
+            <span class="label label-pill label-warning full-width font-size17pt margin-b5">
+                {{main.toursService.getCurrentActiveUser().name}}&nbsp;{{main.COMMON.activeActions[main.toursService.getCurrentTourNumber() - 1]}}
+            </span>
+            <span class="label label-pill label-info full-width font-size17pt">
+                {{main.toursService.getCurrentPassiveUser().name}}&nbsp;{{main.COMMON.passiveAction}}
+            </span>
+        </div>
+    </div>
+    <round-timer ng-show="main.isRoundRunning"></round-timer>
+    <div class="row" ng-hide="main.isRoundRunning">
+        <div class="col-md-12 margin-b15">
+            <input type="button" value="Начать раунд" ng-click="main.start()" ng-class="['btn-block btn-success']"/>
+        </div>
+    </div>
 </div>
