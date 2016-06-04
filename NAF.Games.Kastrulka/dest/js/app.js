@@ -35,8 +35,9 @@ app.constant('COMMON', {
     },
     activeActions: ['объясняет', 'показывает', 'говорит'],
     passiveAction: 'угадывает',
-    ROUND_PERIOD: 3000,
-    TIMER_STEP_VALUE:100
+    ROUND_PERIOD: 30000,
+    TIMER_STEP_VALUE:100,
+    TRANSITION_TIME_LIMIT: 5000
 });
 /**
  * Created by gydro_000 on 5/16/2016.
@@ -323,6 +324,7 @@ app.directive('roundTimer', ['toursService', 'roundService', function (toursServ
         controller: function ($scope, $interval, COMMON){
             $scope.main = {
                 toursService: toursService,
+                roundService: roundService,
                 timer: null,
                 startTimer: function (callback){
                     $scope.main.timer = $interval(function (){
@@ -334,16 +336,21 @@ app.directive('roundTimer', ['toursService', 'roundService', function (toursServ
                 }
             };
 
-            $scope.$watch('roundService.get()', function (newValue){
+            var timerStepProcess = function(){
+                toursService.decrementRemainingTimeInRound(COMMON.TIMER_STEP_VALUE);
+                if(toursService.getRemainingTimeInRound() <= 0){
+                    $interval.cancel($scope.main.timer);
+                    roundService.finish();
+                    toursService.incrementRound();
+                }
+            };
+
+            $scope.$watch('main.roundService.get()', function (newValue){
                 if(newValue) {
-                    $scope.main.startTimer(function () {
-                        toursService.decrementRemainingTimeInRound(COMMON.TIMER_STEP_VALUE);
-                        if(toursService.getRemainingTimeInRound() <= 0){
-                            $interval.cancel($scope.main.timer);
-                            roundService.finish();
-                            toursService.incrementRound();
-                        }
-                    });
+                    $scope.main.startTimer(timerStepProcess);
+                }
+                else if(angular.isDefined(newValue) && !newValue){
+                    $interval.cancel($scope.main.timer);
                 }
             });
         }
@@ -452,40 +459,61 @@ app.factory('teamsService', function(){
     };
 
 });
-app.factory('toursService', function(heroesService, teamsService, COMMON){
+app.factory('toursService', function (heroesService, teamsService, roundService, COMMON) {
 
     var tours = [];
 
-    var incrementTour = function (){
+    var incrementTour = function () {
+        var isFirstTour = !tours || !tours.length;
+        var currentTour = getCurrentTour();
+        var isTimeRemainsYet = !isFirstTour && currentTour.remainingTimeInRound >= COMMON.TRANSITION_TIME_LIMIT;
+        var remainingTimeInRound = isTimeRemainsYet ? currentTour.remainingTimeInRound : COMMON.ROUND_PERIOD;
+
         tours.push({
             number: tours.length + 1,
             remainingHeroes: _.shuffle(heroesService.get()),
             guessedHeroes: [],
-            teams: teamsService.getTeamsExtendedForGame({currentPlayer: 0}),
-            currentTeamNumber: 0,
-            remainingTimeInRound: COMMON.ROUND_PERIOD
+            teams: !isFirstTour && currentTour && currentTour.teams
+                ? angular.copy(currentTour.teams)
+                : teamsService.getTeamsExtendedForGame({currentPlayer: 0}),
+            currentTeamNumber: !isFirstTour && currentTour ? currentTour.currentTeamNumber : 0,
+            remainingTimeInRound: remainingTimeInRound
         });
+
+        roundService.finish();
+
+        if(!isTimeRemainsYet){
+            incrementRound();
+        }
     };
 
-    var getCurrentTour = function (){
-        return tours[tours.length - 1];
+    var incrementRound = function (){
+        var currentTour = getCurrentTour();
+        currentTour.currentTeamNumber = (currentTour.currentTeamNumber + 1) % currentTour.teams.length;
+        currentTour.remainingTimeInRound = COMMON.ROUND_PERIOD;
+        currentTour.remainingHeroes = _.shuffle(currentTour.remainingHeroes);
+        incrementCurrentUser();
     };
 
-    var getCurrentTourProperty = function (propertyName){
+    var getCurrentTour = function () {
+        return tours && tours.length ? tours[tours.length - 1] : null;
+    };
+
+    var getCurrentTourProperty = function (propertyName) {
         return getCurrentTour()[propertyName];
     };
 
-    var getCurrentTeam = function(){
+    var getCurrentTeam = function () {
         var currentTour = getCurrentTour();
         return currentTour.teams[currentTour.currentTeamNumber];
     };
 
-    var incrementCurrentUser = function(){
+    var incrementCurrentUser = function () {
         var currentTeam = getCurrentTeam();
         currentTeam.currentPlayer++;
     };
 
-    var getRemainingHeroesInCurrentTour = function (){
+    var getRemainingHeroesInCurrentTour = function () {
         return getCurrentTourProperty("remainingHeroes");
     };
 
@@ -498,49 +526,43 @@ app.factory('toursService', function(heroesService, teamsService, COMMON){
         getCurrentTourNumber: function () {
             return getCurrentTourProperty("number");
         },
-        initialize: function (){
+        initialize: function () {
             tours = [];
             incrementTour();
         },
         getRemainingHeroesInCurrentTour: getRemainingHeroesInCurrentTour,
         getGuessedHeroesInCurrentTour: getGuessedHeroesInCurrentTour,
         getCurrentTeam: getCurrentTeam,
-        getCurrentActiveUser: function (){
+        getCurrentActiveUser: function () {
             var currentTeam = getCurrentTeam();
             return currentTeam.players[currentTeam.currentPlayer % currentTeam.players.length];
         },
-        getCurrentPassiveUser: function (){
+        getCurrentPassiveUser: function () {
             var currentTeam = getCurrentTeam();
             return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
         },
-        getRemainingTimeInRound: function (){
-            return getCurrentTour().remainingTimeInRound/1000;
+        getRemainingTimeInRound: function () {
+            return getCurrentTour().remainingTimeInRound / 1000;
         },
-        decrementRemainingTimeInRound: function(decrementValue){
+        decrementRemainingTimeInRound: function (decrementValue) {
             var currentTour = getCurrentTour();
             currentTour.remainingTimeInRound = currentTour.remainingTimeInRound - decrementValue;
         },
-        moveHeroFromRemainingToGuessed: function (){
+        moveHeroFromRemainingToGuessed: function () {
             var currentTour = getCurrentTour();
             currentTour.guessedHeroes.push(currentTour.remainingHeroes[0]);
-            currentTour.remainingHeroes.splice(0,1);
+            currentTour.remainingHeroes.splice(0, 1);
 
-            if(!getRemainingHeroesInCurrentTour().length){
+            if (!getRemainingHeroesInCurrentTour().length) {
                 incrementTour();
             }
         },
-        getCurrentHeroName: function (){
+        getCurrentHeroName: function () {
             var currentTour = getCurrentTour();
-            if(currentTour.remainingHeroes && currentTour.remainingHeroes.length && currentTour.remainingHeroes[0].name){
+            if (currentTour.remainingHeroes && currentTour.remainingHeroes.length && currentTour.remainingHeroes[0].name) {
                 return currentTour.remainingHeroes[0].name;
             }
         },
-        incrementRound: function (){
-            var currentTour = getCurrentTour();
-            currentTour.currentTeamNumber = (currentTour.currentTeamNumber + 1) % currentTour.teams.length;
-            currentTour.remainingTimeInRound = COMMON.ROUND_PERIOD;
-            currentTour.remainingHeroes = _.shuffle(currentTour.remainingHeroes);
-            incrementCurrentUser();
-        }
+        incrementRound: incrementRound
     };
 });

@@ -11,6 +11,7 @@ app.constant('COMMON', {
     },
     activeActions: ['объясняет', 'показывает', 'говорит'],
     passiveAction: 'угадывает',
-    ROUND_PERIOD: 3000,
-    TIMER_STEP_VALUE:100
+    ROUND_PERIOD: 30000,
+    TIMER_STEP_VALUE:100,
+    TRANSITION_TIME_LIMIT: 5000
 });
