@@ -35,33 +35,34 @@ app.constant('COMMON', {
     },
     activeActions: ['объясняет', 'показывает', 'говорит'],
     passiveAction: 'угадывает',
-    ROUND_PERIOD: 30
+    ROUND_PERIOD: 3000,
+    TIMER_STEP_VALUE:100
 });
 /**
  * Created by gydro_000 on 5/16/2016.
  */
 app.controller("kastrulkaCtrl", function($scope) {
 });
-app.controller("gameCtrl", function ($scope, $location, playersService, teamsService, toursService, rulesService, COMMON) {
+app.controller("gameCtrl", function ($scope, $location, playersService, teamsService, toursService, rulesService, roundService, COMMON) {
     $scope.main = {
         toursService: toursService,
         rulesService: rulesService,
         COMMON: COMMON,
+        roundService: roundService,
 
         getCurrentActiveUser: function (){
             var currentTeam = $scope.main.toursService.getCurrentTeam();
             return currentTeam.players[currentTeam.currentPlayer];
         },
         start: function () {
-            $scope.main.isRoundRunning = true;
-        }
+            roundService.start();
+            //$scope.main.isRoundRunning = true;
+        }//,
+        //finish: function (){
+        //    $scope.main.isRoundRunning = false;
+        //    debugger;
+        //}
     };
-
-    //var teams = teamsService.get();
-
-    //while(toursService.getRemainingHeroesInCurrentTour().length){
-    //
-    //}
 });
 app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService, heroesService, numbersService) {
     $scope.data = {
@@ -311,16 +312,40 @@ app.directive('heroInput', function () {
         }
     };
 });
-app.directive('roundTimer', ['toursService', function (toursService) {
+app.directive('roundTimer', ['toursService', 'roundService', function (toursService, roundService) {
     return {
         restrict: "E",
         replace: true,
         templateUrl: "./src/html/round.html",
-        scope: {},
-        controller: function ($scope){
+        scope: {
+            //isRoundRunning: "="
+        },
+        controller: function ($scope, $interval, COMMON){
             $scope.main = {
-                toursService: toursService
+                toursService: toursService,
+                timer: null,
+                startTimer: function (callback){
+                    $scope.main.timer = $interval(function (){
+                        callback();
+                    }, COMMON.TIMER_STEP_VALUE);
+                },
+                guessed: function (){
+                    toursService.moveHeroFromRemainingToGuessed();
+                }
             };
+
+            $scope.$watch('roundService.get()', function (newValue){
+                if(newValue) {
+                    $scope.main.startTimer(function () {
+                        toursService.decrementRemainingTimeInRound(COMMON.TIMER_STEP_VALUE);
+                        if(toursService.getRemainingTimeInRound() <= 0){
+                            $interval.cancel($scope.main.timer);
+                            roundService.finish();
+                            toursService.incrementRound();
+                        }
+                    });
+                }
+            });
         }
     };
 }]);
@@ -370,10 +395,31 @@ app.factory('playersService', function(){
         }
     };
 });
+app.factory('roundService', function(){
+    var isRoundRunning;
+
+    return {
+        start: function (){
+            isRoundRunning = true;
+        },
+        finish: function(){
+            isRoundRunning = false;
+        },
+        get: function (){
+            return isRoundRunning;
+        }
+    };
+});
 app.factory('rulesService', function(COMMON){
     var tourRules = [
         'В данном туре игры один участник команды объясняет персонажа, не используя при этом созвучных и однокоренных слов. ' +
-            'Второй участник игры должен угадать персонажа. Раунд длится ' + COMMON.ROUND_PERIOD +
+            'Второй участник игры должен угадать персонажа. Раунд длится ' + COMMON.ROUND_PERIOD/1000 +
+        ' секунд, за которые нужно угадать как можно больше персонажей.',
+        'В данном туре игры один участник команды показывает персонажа, не издавая при этом ни звука. ' +
+            'Второй участник игры должен угадать персонажа. Раунд длится ' + COMMON.ROUND_PERIOD/1000 +
+            ' секунд, за которые нужно угадать как можно больше персонажей.',
+        'В данном туре игры один участник команды называет лишь одно единственное слово, наиболее подходящее персонажу, не являющееся созвучным и однокоренным словом. Показывать что-либо жестами и мимикой также не позволяется. ' +
+        'Второй участник игры должен угадать персонажа. Раунд длится ' + COMMON.ROUND_PERIOD/1000 +
         ' секунд, за которые нужно угадать как можно больше персонажей.'
     ];
 
@@ -411,7 +457,6 @@ app.factory('toursService', function(heroesService, teamsService, COMMON){
     var tours = [];
 
     var incrementTour = function (){
-
         tours.push({
             number: tours.length + 1,
             remainingHeroes: _.shuffle(heroesService.get()),
@@ -435,6 +480,19 @@ app.factory('toursService', function(heroesService, teamsService, COMMON){
         return currentTour.teams[currentTour.currentTeamNumber];
     };
 
+    var incrementCurrentUser = function(){
+        var currentTeam = getCurrentTeam();
+        currentTeam.currentPlayer++;
+    };
+
+    var getRemainingHeroesInCurrentTour = function (){
+        return getCurrentTourProperty("remainingHeroes");
+    };
+
+    var getGuessedHeroesInCurrentTour = function () {
+        return getCurrentTourProperty("guessedHeroes");
+    };
+
     return {
         incrementTour: incrementTour,
         getCurrentTourNumber: function () {
@@ -444,25 +502,45 @@ app.factory('toursService', function(heroesService, teamsService, COMMON){
             tours = [];
             incrementTour();
         },
-        getRemainingHeroesInCurrentTour: function (){
-            return getCurrentTourProperty("remainingHeroes");
-        },
-        getGuessedHeroesInCurrentTour: function (){
-            return getCurrentTourProperty("guessedHeroes");
-        },
+        getRemainingHeroesInCurrentTour: getRemainingHeroesInCurrentTour,
+        getGuessedHeroesInCurrentTour: getGuessedHeroesInCurrentTour,
         getCurrentTeam: getCurrentTeam,
         getCurrentActiveUser: function (){
             var currentTeam = getCurrentTeam();
-            return currentTeam.players[currentTeam.currentPlayer];
+            return currentTeam.players[currentTeam.currentPlayer % currentTeam.players.length];
         },
         getCurrentPassiveUser: function (){
             var currentTeam = getCurrentTeam();
             return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
-
         },
         getRemainingTimeInRound: function (){
-            return getCurrentTour().remainingTimeInRound;
+            return getCurrentTour().remainingTimeInRound/1000;
+        },
+        decrementRemainingTimeInRound: function(decrementValue){
+            var currentTour = getCurrentTour();
+            currentTour.remainingTimeInRound = currentTour.remainingTimeInRound - decrementValue;
+        },
+        moveHeroFromRemainingToGuessed: function (){
+            var currentTour = getCurrentTour();
+            currentTour.guessedHeroes.push(currentTour.remainingHeroes[0]);
+            currentTour.remainingHeroes.splice(0,1);
+
+            if(!getRemainingHeroesInCurrentTour().length){
+                incrementTour();
+            }
+        },
+        getCurrentHeroName: function (){
+            var currentTour = getCurrentTour();
+            if(currentTour.remainingHeroes && currentTour.remainingHeroes.length && currentTour.remainingHeroes[0].name){
+                return currentTour.remainingHeroes[0].name;
+            }
+        },
+        incrementRound: function (){
+            var currentTour = getCurrentTour();
+            currentTour.currentTeamNumber = (currentTour.currentTeamNumber + 1) % currentTour.teams.length;
+            currentTour.remainingTimeInRound = COMMON.ROUND_PERIOD;
+            currentTour.remainingHeroes = _.shuffle(currentTour.remainingHeroes);
+            incrementCurrentUser();
         }
     };
-
 });

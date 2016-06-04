@@ -19,8 +19,8 @@
             </span>
         </div>
     </div>
-    <round-timer ng-show="main.isRoundRunning"></round-timer>
-    <div class="row" ng-hide="main.isRoundRunning">
+    <round-timer ng-show="main.roundService.get()"></round-timer>
+    <div class="row" ng-hide="main.roundService.get()">
         <div class="col-md-12 margin-b15">
             <input type="button" value="Начать раунд" ng-click="main.start()" ng-class="['btn-block btn-success']"/>
         </div>
