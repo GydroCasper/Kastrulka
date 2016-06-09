@@ -9,6 +9,7 @@ app.constant('COMMON', {
             label: 'Нет'
         }
     },
+    TOURS_NUMBERS: 3,
     activeActions: ['объясняет', 'показывает', 'говорит'],
     passiveAction: 'угадывает',
     ROUND_PERIOD: 30000,

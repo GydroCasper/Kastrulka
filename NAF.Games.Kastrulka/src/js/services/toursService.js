@@ -1,8 +1,12 @@
-app.factory('toursService', function (heroesService, teamsService, roundService, COMMON) {
+app.factory('toursService', function ($location, heroesService, teamsService, roundService, COMMON) {
 
     var tours = [];
 
     var incrementTour = function () {
+        if(tours && tours.length == COMMON.TOURS_NUMBERS){
+            $location.path('results');
+        }
+
         var isFirstTour = !tours || !tours.length;
         var currentTour = getCurrentTour();
         var isTimeRemainsYet = !isFirstTour && currentTour.remainingTimeInRound >= COMMON.TRANSITION_TIME_LIMIT;
@@ -35,7 +39,7 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
     };
 
     var getCurrentTour = function () {
-        return tours && tours.length ? tours[tours.length - 1] : null;
+        return tours && tours.length ? _.last(tours) : null;
     };
 
     var getCurrentTourProperty = function (propertyName) {
@@ -60,6 +64,16 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
         return getCurrentTourProperty("guessedHeroes");
     };
 
+    var getCurrentActiveUser = function (){
+        var currentTeam = getCurrentTeam();
+        return currentTeam.players[currentTeam.currentPlayer % currentTeam.players.length];
+    };
+
+    var getCurrentPassiveUser = function (){
+        var currentTeam = getCurrentTeam();
+        return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
+    };
+
     return {
         incrementTour: incrementTour,
         getCurrentTourNumber: function () {
@@ -72,14 +86,8 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
         getRemainingHeroesInCurrentTour: getRemainingHeroesInCurrentTour,
         getGuessedHeroesInCurrentTour: getGuessedHeroesInCurrentTour,
         getCurrentTeam: getCurrentTeam,
-        getCurrentActiveUser: function () {
-            var currentTeam = getCurrentTeam();
-            return currentTeam.players[currentTeam.currentPlayer % currentTeam.players.length];
-        },
-        getCurrentPassiveUser: function () {
-            var currentTeam = getCurrentTeam();
-            return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
-        },
+        getCurrentActiveUser: getCurrentActiveUser,
+        getCurrentPassiveUser: getCurrentPassiveUser,
         getRemainingTimeInRound: function () {
             return getCurrentTour().remainingTimeInRound / 1000;
         },
@@ -102,6 +110,16 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
                 return currentTour.remainingHeroes[0].name;
             }
         },
-        incrementRound: incrementRound
+        incrementRound: incrementRound,
+        addGuessedHeroToPlayerCollection: function (){
+            var currentPassivePlayer = getCurrentPassiveUser();
+
+            if(!angular.isDefined(currentPassivePlayer.guessedHeroes)){
+                currentPassivePlayer.guessedHeroes = [];
+            }
+
+            var currentTour = getCurrentTour();
+            currentPassivePlayer.guessedHeroes.push(_.last(currentTour.guessedHeroes));
+        }
     };
 });

@@ -20,6 +20,10 @@ app.config(function($routeProvider) {
         .when('/game', {
             templateUrl: './src/html/game.html',
             controller: 'gameCtrl'
+        })
+        .when('/results', {
+            templateUrl: './src/html/results.html',
+            controller: 'resultsCtrl'
         });
 });
 app.constant('COMMON', {
@@ -33,15 +37,13 @@ app.constant('COMMON', {
             label: 'Нет'
         }
     },
+    TOURS_NUMBERS: 3,
     activeActions: ['объясняет', 'показывает', 'говорит'],
     passiveAction: 'угадывает',
     ROUND_PERIOD: 30000,
     TIMER_STEP_VALUE:100,
     TRANSITION_TIME_LIMIT: 5000
 });
-/**
- * Created by gydro_000 on 5/16/2016.
- */
 app.controller("kastrulkaCtrl", function($scope) {
 });
 app.controller("gameCtrl", function ($scope, $location, playersService, teamsService, toursService, rulesService, roundService, COMMON) {
@@ -265,6 +267,9 @@ app.controller("playersCtrl", function ($scope, $location, COMMON, playersServic
         });
     })();
 });
+app.controller("resultsCtrl", function ($scope) {
+
+});
 /**
  * Created by gydro_000 on 5/17/2016.
  */
@@ -333,6 +338,7 @@ app.directive('roundTimer', ['toursService', 'roundService', function (toursServ
                 },
                 guessed: function (){
                     toursService.moveHeroFromRemainingToGuessed();
+                    toursService.addGuessedHeroToPlayerCollection();
                 }
             };
 
@@ -459,11 +465,15 @@ app.factory('teamsService', function(){
     };
 
 });
-app.factory('toursService', function (heroesService, teamsService, roundService, COMMON) {
+app.factory('toursService', function ($location, heroesService, teamsService, roundService, COMMON) {
 
     var tours = [];
 
     var incrementTour = function () {
+        if(tours && tours.length == COMMON.TOURS_NUMBERS){
+            $location.path('results');
+        }
+
         var isFirstTour = !tours || !tours.length;
         var currentTour = getCurrentTour();
         var isTimeRemainsYet = !isFirstTour && currentTour.remainingTimeInRound >= COMMON.TRANSITION_TIME_LIMIT;
@@ -496,7 +506,7 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
     };
 
     var getCurrentTour = function () {
-        return tours && tours.length ? tours[tours.length - 1] : null;
+        return tours && tours.length ? _.last(tours) : null;
     };
 
     var getCurrentTourProperty = function (propertyName) {
@@ -521,6 +531,16 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
         return getCurrentTourProperty("guessedHeroes");
     };
 
+    var getCurrentActiveUser = function (){
+        var currentTeam = getCurrentTeam();
+        return currentTeam.players[currentTeam.currentPlayer % currentTeam.players.length];
+    };
+
+    var getCurrentPassiveUser = function (){
+        var currentTeam = getCurrentTeam();
+        return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
+    };
+
     return {
         incrementTour: incrementTour,
         getCurrentTourNumber: function () {
@@ -533,14 +553,8 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
         getRemainingHeroesInCurrentTour: getRemainingHeroesInCurrentTour,
         getGuessedHeroesInCurrentTour: getGuessedHeroesInCurrentTour,
         getCurrentTeam: getCurrentTeam,
-        getCurrentActiveUser: function () {
-            var currentTeam = getCurrentTeam();
-            return currentTeam.players[currentTeam.currentPlayer % currentTeam.players.length];
-        },
-        getCurrentPassiveUser: function () {
-            var currentTeam = getCurrentTeam();
-            return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
-        },
+        getCurrentActiveUser: getCurrentActiveUser,
+        getCurrentPassiveUser: getCurrentPassiveUser,
         getRemainingTimeInRound: function () {
             return getCurrentTour().remainingTimeInRound / 1000;
         },
@@ -563,6 +577,16 @@ app.factory('toursService', function (heroesService, teamsService, roundService,
                 return currentTour.remainingHeroes[0].name;
             }
         },
-        incrementRound: incrementRound
+        incrementRound: incrementRound,
+        addGuessedHeroToPlayerCollection: function (){
+            var currentPassivePlayer = getCurrentPassiveUser();
+
+            if(!angular.isDefined(currentPassivePlayer.guessedHeroes)){
+                currentPassivePlayer.guessedHeroes = [];
+            }
+
+            var currentTour = getCurrentTour();
+            currentPassivePlayer.guessedHeroes.push(_.last(currentTour.guessedHeroes));
+        }
     };
 });

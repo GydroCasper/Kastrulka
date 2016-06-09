@@ -18,6 +18,7 @@ app.directive('roundTimer', ['toursService', 'roundService', function (toursServ
                 },
                 guessed: function (){
                     toursService.moveHeroFromRemainingToGuessed();
+                    toursService.addGuessedHeroToPlayerCollection();
                 }
             };
 
