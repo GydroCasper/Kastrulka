@@ -267,8 +267,13 @@ app.controller("playersCtrl", function ($scope, $location, COMMON, playersServic
         });
     })();
 });
-app.controller("resultsCtrl", function ($scope) {
+app.controller("resultsCtrl", function ($scope, teamsService, toursService) {
+    $scope.data = {teams: teamsService.get()};
+    _.forEach($scope.data.teams, function (team){
+        _.assign(team, {guessedHeroes: toursService.getGuessedHeroesCountByTeam(team)});
+    });
 
+    $scope.data.teams = _.orderBy($scope.data.teams, 'guessedHeroes', 'desc');
 });
 /**
  * Created by gydro_000 on 5/17/2016.
@@ -470,7 +475,7 @@ app.factory('toursService', function ($location, heroesService, teamsService, ro
     var tours = [];
 
     var incrementTour = function () {
-        if(tours && tours.length == COMMON.TOURS_NUMBERS){
+        if(tours && tours.length >= COMMON.TOURS_NUMBERS){
             $location.path('results');
         }
 
@@ -478,31 +483,40 @@ app.factory('toursService', function ($location, heroesService, teamsService, ro
         var currentTour = getCurrentTour();
         var isTimeRemainsYet = !isFirstTour && currentTour.remainingTimeInRound >= COMMON.TRANSITION_TIME_LIMIT;
         var remainingTimeInRound = isTimeRemainsYet ? currentTour.remainingTimeInRound : COMMON.ROUND_PERIOD;
+        var teams = teamsService.get();
 
-        tours.push({
+        _.forEach(teams, function (team){
+            var currentPlayerObj = {
+                currentPlayer: isFirstTour ? 0 : _.find(currentTour.teams, function(item) { return item.id === team.id; }).currentPlayer
+            };
+
+            _.assign(team, currentPlayerObj);
+        });
+
+        var tour = {
             number: tours.length + 1,
             remainingHeroes: _.shuffle(heroesService.get()),
             guessedHeroes: [],
-            teams: !isFirstTour && currentTour && currentTour.teams
-                ? angular.copy(currentTour.teams)
-                : teamsService.getTeamsExtendedForGame({currentPlayer: 0}),
-            currentTeamNumber: !isFirstTour && currentTour ? currentTour.currentTeamNumber : 0,
-            remainingTimeInRound: remainingTimeInRound
-        });
+            remainingTimeInRound: remainingTimeInRound,
+            teams: teams,
+            currentTeamNumber: isFirstTour ? 0 : currentTour.currentTeamNumber
+        };
 
-        roundService.finish();
+        tours.push(tour);
 
-        if(!isTimeRemainsYet){
+        if(!isFirstTour && !isTimeRemainsYet){
             incrementRound();
         }
+
+        roundService.finish();
     };
 
     var incrementRound = function (){
         var currentTour = getCurrentTour();
+        incrementCurrentUser();
         currentTour.currentTeamNumber = (currentTour.currentTeamNumber + 1) % currentTour.teams.length;
         currentTour.remainingTimeInRound = COMMON.ROUND_PERIOD;
         currentTour.remainingHeroes = _.shuffle(currentTour.remainingHeroes);
-        incrementCurrentUser();
     };
 
     var getCurrentTour = function () {
@@ -539,6 +553,22 @@ app.factory('toursService', function ($location, heroesService, teamsService, ro
     var getCurrentPassiveUser = function (){
         var currentTeam = getCurrentTeam();
         return currentTeam.players[(currentTeam.currentPlayer + 1) % currentTeam.players.length];
+    };
+
+    var getGuessedHeroesCountByTeam = function (team){
+        var count = 0;
+        _.forEach(tours, function(tour) {
+            var tourTeam = _.find(tour.teams, function(item) { return item.id == team.id; });
+            if(tourTeam) {
+                _.forEach(tourTeam.players, function(player) {
+                    if(player.guessedHeroes){
+                        count += player.guessedHeroes.length;
+                    }
+                });
+            }
+        });
+
+        return count;
     };
 
     return {
@@ -587,6 +617,7 @@ app.factory('toursService', function ($location, heroesService, teamsService, ro
 
             var currentTour = getCurrentTour();
             currentPassivePlayer.guessedHeroes.push(_.last(currentTour.guessedHeroes));
-        }
+        },
+        getGuessedHeroesCountByTeam: getGuessedHeroesCountByTeam
     };
 });

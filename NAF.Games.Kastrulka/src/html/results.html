@@ -2,9 +2,16 @@
     <div class="col-md-12 margin-b15 center">
         <h3>Результаты</h3>
     </div>
-    <div class="row">
-        <div class="col-md-12 margin-b15 center">
-            <span>Добавьте участников игры (должно быть не меньше {{main.MINIMAL_PLAYERS_AMOUNT}} человек и быть четным количеством)</span>
+</div>
+<div class="row margin-b15" ng-repeat="team in data.teams track by team.id">
+    <div class="col-md-12">
+        <span class="label label-pill label-default full-width font-size17pt">
+            <span style="float:right">{{team.guessedHeroes}}</span>{{team.name}}
+        </span>
+        <div class="padding-lr30 margin-t15 margin-b15">
+            <span class="label label-primary full-width margin-b5 font-size13pt" ng-repeat="player in team.players track by player.id">
+                {{player.name}}
+            </span>
         </div>
     </div>
 </div>

@@ -23,5 +23,12 @@ app.config(function($routeProvider) {
         .when('/results', {
             templateUrl: './src/html/results.html',
             controller: 'resultsCtrl'
+        })
+        .run(function($rootScope, $location) {
+            $rootScope.$on("$routeChangeStart", function (event, next) {
+                if (!(next.templateUrl == "views/login.html")) {
+                    $location.path("/login");
+                }
+            })
         });
 });
