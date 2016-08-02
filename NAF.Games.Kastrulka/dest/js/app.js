@@ -24,7 +24,17 @@ app.config(function($routeProvider) {
         .when('/results', {
             templateUrl: './src/html/results.html',
             controller: 'resultsCtrl'
+        })
+        .when('/rules', {
+            templateUrl: './src/html/rules.html'
         });
+        //.run(function($rootScope, $location) {
+        //    $rootScope.$on("$routeChangeStart", function (event, next) {
+        //        if (!(next.templateUrl == "views/login.html")) {
+        //            $location.path("/login");
+        //        }
+        //    })
+        //});
 });
 app.constant('COMMON', {
     MINIMAL_PLAYERS_AMOUNT: 4,
@@ -275,9 +285,6 @@ app.controller("resultsCtrl", function ($scope, teamsService, toursService) {
 
     $scope.data.teams = _.orderBy($scope.data.teams, 'guessedHeroes', 'desc');
 });
-/**
- * Created by gydro_000 on 5/17/2016.
- */
 app.controller("startpageCtrl", function($scope) {
 });
 app.controller("teamsCtrl", function ($scope, $location, playersService, teamsService, toursService) {

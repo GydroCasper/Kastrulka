@@ -35,6 +35,10 @@
     margin-bottom: 30px;
 }
 
+.margin-l30{
+    margin-left: 30px;
+}
+
 .padding-lr30{
     padding-left: 30px;
     padding-right: 30px;
@@ -56,14 +60,25 @@
     width:100%;
 }
 
-.font-size17pt{
-    font-size: 17pt;
+.font-size11pt{
+    font-size: 11pt;
 }
 
 .font-size13pt{
     font-size: 13pt;
 }
 
+.font-size17pt{
+    font-size: 17pt;
+}
+
 .font-size100pt{
     font-size: 100pt;
+}
+
+.pre-text{
+    background: #f3f3f3;
+    border: 1px dotted #bbbbbb;
+    padding: 7px 8px 5px 8px;
+    line-height: 1.3em;
 }

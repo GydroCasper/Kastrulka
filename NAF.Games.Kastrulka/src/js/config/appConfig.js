@@ -24,11 +24,14 @@ app.config(function($routeProvider) {
             templateUrl: './src/html/results.html',
             controller: 'resultsCtrl'
         })
-        .run(function($rootScope, $location) {
-            $rootScope.$on("$routeChangeStart", function (event, next) {
-                if (!(next.templateUrl == "views/login.html")) {
-                    $location.path("/login");
-                }
-            })
+        .when('/rules', {
+            templateUrl: './src/html/rules.html'
         });
+        //.run(function($rootScope, $location) {
+        //    $rootScope.$on("$routeChangeStart", function (event, next) {
+        //        if (!(next.templateUrl == "views/login.html")) {
+        //            $location.path("/login");
+        //        }
+        //    })
+        //});
 });
