@@ -26,15 +26,9 @@ app.config(function($routeProvider) {
             controller: 'resultsCtrl'
         })
         .when('/rules', {
-            templateUrl: './src/html/rules.html'
+            templateUrl: './src/html/rules.html',
+            controller: 'rulesCtrl'
         });
-        //.run(function($rootScope, $location) {
-        //    $rootScope.$on("$routeChangeStart", function (event, next) {
-        //        if (!(next.templateUrl == "views/login.html")) {
-        //            $location.path("/login");
-        //        }
-        //    })
-        //});
 });
 app.constant('COMMON', {
     MINIMAL_PLAYERS_AMOUNT: 4,
@@ -54,6 +48,66 @@ app.constant('COMMON', {
     TIMER_STEP_VALUE:100,
     TRANSITION_TIME_LIMIT: 5000
 });
+app.directive('heroInput', function () {
+    return {
+        restrict: "E",
+        replace: true,
+        templateUrl: "./src/html/heroInput.html",
+        scope: {
+            hero: "=",
+            heroNameChanged: "&"
+        },
+        controller: function ($scope){
+            $scope.$watch('hero.name', function (){
+                $scope.heroNameChanged()();
+            });
+        }
+    };
+});
+app.directive('roundTimer', ['toursService', 'roundService', function (toursService, roundService) {
+    return {
+        restrict: "E",
+        replace: true,
+        templateUrl: "./src/html/round.html",
+        scope: {
+            //isRoundRunning: "="
+        },
+        controller: function ($scope, $interval, COMMON){
+            $scope.main = {
+                toursService: toursService,
+                roundService: roundService,
+                timer: null,
+                startTimer: function (callback){
+                    $scope.main.timer = $interval(function (){
+                        callback();
+                    }, COMMON.TIMER_STEP_VALUE);
+                },
+                guessed: function (){
+                    toursService.moveHeroFromRemainingToGuessed();
+                    toursService.addGuessedHeroToPlayerCollection();
+                }
+            };
+
+            var timerStepProcess = function(){
+                toursService.decrementRemainingTimeInRound(COMMON.TIMER_STEP_VALUE);
+                if(toursService.getRemainingTimeInRound() <= 0){
+                    $interval.cancel($scope.main.timer);
+                    roundService.finish();
+                    toursService.incrementRound();
+                }
+            };
+
+            $scope.$watch('main.roundService.get()', function (newValue){
+                if(newValue) {
+                    $scope.main.startTimer(timerStepProcess);
+                }
+                else if(angular.isDefined(newValue) && !newValue){
+                    $interval.cancel($scope.main.timer);
+                }
+            });
+        }
+    };
+}]);
 app.controller("kastrulkaCtrl", function($scope) {
 });
 app.controller("gameCtrl", function ($scope, $location, playersService, teamsService, toursService, rulesService, roundService, COMMON) {
@@ -87,7 +141,7 @@ app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService
         getFilledHeroesForPlayer: function (player){
             return heroesService.getFilledHeroesAmountForPlayer(player);
         },
-        heroNameChanged: function (player){
+        heroNameChanged: function (){
             $scope.main.validateHeroesAmountForAllPlayers();
             $scope.main.validateHeroesUniquity();
         },
@@ -96,7 +150,7 @@ app.controller("heroesCtrl", function ($scope, $location, COMMON, playersService
                 $scope.heroesForm.$setValidity("heroesAmountNotEqualsToRequired", !checkIfHeroesAmountNotEqualsToRequired());
             }
         },
-        validateHeroesUniquity: function (player){
+        validateHeroesUniquity: function (){
             if($scope.heroesForm) {
                 $scope.heroesForm.$setValidity("heroIsNotUnique", heroesService.checkIfHeroesAreUnique($scope.data.players));
             }
@@ -285,6 +339,11 @@ app.controller("resultsCtrl", function ($scope, teamsService, toursService) {
 
     $scope.data.teams = _.orderBy($scope.data.teams, 'guessedHeroes', 'desc');
 });
+app.controller("rulesCtrl", function ($scope, COMMON) {
+    $scope.main = {
+        COMMON: COMMON
+    };
+});
 app.controller("startpageCtrl", function($scope) {
 });
 app.controller("teamsCtrl", function ($scope, $location, playersService, teamsService, toursService) {
@@ -314,66 +373,6 @@ app.controller("teamsCtrl", function ($scope, $location, playersService, teamsSe
 
     createTeams();
 });
-app.directive('heroInput', function () {
-    return {
-        restrict: "E",
-        replace: true,
-        templateUrl: "./src/html/heroInput.html",
-        scope: {
-            hero: "=",
-            heroNameChanged: "&"
-        },
-        controller: function ($scope){
-            $scope.$watch('hero.name', function (){
-                $scope.heroNameChanged()();
-            });
-        }
-    };
-});
-app.directive('roundTimer', ['toursService', 'roundService', function (toursService, roundService) {
-    return {
-        restrict: "E",
-        replace: true,
-        templateUrl: "./src/html/round.html",
-        scope: {
-            //isRoundRunning: "="
-        },
-        controller: function ($scope, $interval, COMMON){
-            $scope.main = {
-                toursService: toursService,
-                roundService: roundService,
-                timer: null,
-                startTimer: function (callback){
-                    $scope.main.timer = $interval(function (){
-                        callback();
-                    }, COMMON.TIMER_STEP_VALUE);
-                },
-                guessed: function (){
-                    toursService.moveHeroFromRemainingToGuessed();
-                    toursService.addGuessedHeroToPlayerCollection();
-                }
-            };
-
-            var timerStepProcess = function(){
-                toursService.decrementRemainingTimeInRound(COMMON.TIMER_STEP_VALUE);
-                if(toursService.getRemainingTimeInRound() <= 0){
-                    $interval.cancel($scope.main.timer);
-                    roundService.finish();
-                    toursService.incrementRound();
-                }
-            };
-
-            $scope.$watch('main.roundService.get()', function (newValue){
-                if(newValue) {
-                    $scope.main.startTimer(timerStepProcess);
-                }
-                else if(angular.isDefined(newValue) && !newValue){
-                    $interval.cancel($scope.main.timer);
-                }
-            });
-        }
-    };
-}]);
 app.factory('heroesService', function () {
     var heroes = [];
 

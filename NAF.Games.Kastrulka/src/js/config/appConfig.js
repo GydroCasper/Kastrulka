@@ -25,13 +25,7 @@ app.config(function($routeProvider) {
             controller: 'resultsCtrl'
         })
         .when('/rules', {
-            templateUrl: './src/html/rules.html'
+            templateUrl: './src/html/rules.html',
+            controller: 'rulesCtrl'
         });
-        //.run(function($rootScope, $location) {
-        //    $rootScope.$on("$routeChangeStart", function (event, next) {
-        //        if (!(next.templateUrl == "views/login.html")) {
-        //            $location.path("/login");
-        //        }
-        //    })
-        //});
 });
